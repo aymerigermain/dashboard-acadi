@@ -423,19 +423,21 @@ export const Header: React.FC<HeaderProps> = ({
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
             justifyContent: 'space-between',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 3, sm: 0 },
             mb: 4,
             pt: 4,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 3 } }}>
             <Box
               component="img"
               src="/acadi-logo.png"
               alt="ACADI Logo"
               sx={{
-                height: 64,
+                height: { xs: 48, sm: 64 },
                 width: 'auto',
               }}
             />
@@ -447,48 +449,87 @@ export const Header: React.FC<HeaderProps> = ({
                   fontWeight: 700,
                   color: '#0496FF',
                   mb: 1,
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
                 }}
               >
                 Tableau de Bord - Formation Stratégie
               </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
+              <Typography 
+                variant="subtitle1" 
+                color="text.secondary"
+                sx={{
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                }}
+              >
                 Suivi des performances de vente en temps réel
               </Typography>
             </Box>
           </Box>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 1, sm: 2 },
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+          }}>
             {lastUpdated && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{
+                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  display: { xs: 'none', sm: 'block' },
+                }}
+              >
                 Dernière MAJ: {formatDateLong(lastUpdated)}
               </Typography>
             )}
             <Tooltip title="Accéder à la plateforme Teachizy">
               <IconButton
                 onClick={() => window.open('https://app.teachizy.fr/', '_blank')}
-                sx={{ bgcolor: '#0496FF', color: 'white', '&:hover': { bgcolor: '#0374CC' } }}
+                sx={{ 
+                  bgcolor: '#0496FF', 
+                  color: 'white', 
+                  '&:hover': { bgcolor: '#0374CC' },
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
+                }}
               >
-                <Launch />
+                <Launch sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
               </IconButton>
             </Tooltip>
             <Tooltip title="Exporter PDF">
               <IconButton
                 onClick={onExport}
                 disabled={loading || !stats}
-                sx={{ bgcolor: '#0496FF', color: 'white', '&:hover': { bgcolor: '#0374CC' } }}
+                sx={{ 
+                  bgcolor: '#0496FF', 
+                  color: 'white', 
+                  '&:hover': { bgcolor: '#0374CC' },
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
+                }}
               >
-                <PictureAsPdf />
+                <PictureAsPdf sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
               </IconButton>
             </Tooltip>
             <Tooltip title="Actualiser les données">
               <IconButton
                 onClick={onRefresh}
                 disabled={loading}
-                sx={{ bgcolor: '#0496FF', color: 'white', '&:hover': { bgcolor: '#0374CC' } }}
+                sx={{ 
+                  bgcolor: '#0496FF', 
+                  color: 'white', 
+                  '&:hover': { bgcolor: '#0374CC' },
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
+                }}
               >
                 <Refresh
                   sx={{
                     animation: loading ? 'spin 1s linear infinite' : 'none',
+                    fontSize: { xs: '1.2rem', sm: '1.5rem' },
                     '@keyframes spin': {
                       '0%': { transform: 'rotate(0deg)' },
                       '100%': { transform: 'rotate(360deg)' },

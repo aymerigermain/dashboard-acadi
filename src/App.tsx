@@ -12,6 +12,7 @@ import {
 import { theme } from './theme';
 import { useRef } from 'react';
 import { useStripeData } from './hooks/useStripeData';
+import { AuthGuard } from './components/AuthGuard';
 import { Header } from './components/Header';
 import { SalesChart } from './components/SalesChart';
 import { RevenueChart } from './components/RevenueChart';
@@ -28,21 +29,22 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       
-      {/* Loading Backdrop */}
-      <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loading && !stats} // Only show on initial load
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <CircularProgress color="inherit" size={60} />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Chargement des données...
-          </Typography>
-        </Box>
-      </Backdrop>
+      <AuthGuard>
+        {/* Loading Backdrop */}
+        <Backdrop
+          sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={loading && !stats} // Only show on initial load
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <CircularProgress color="inherit" size={60} />
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              Chargement des données...
+            </Typography>
+          </Box>
+        </Backdrop>
 
-      {/* Main Content */}
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }} data-export="dashboard">
+        {/* Main Content */}
+        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }} data-export="dashboard">
         {/* Header with KPIs */}
         <Header
           stats={stats}
@@ -125,7 +127,8 @@ function App() {
             </Typography>
           </Box>
         </Container>
-      </Box>
+        </Box>
+      </AuthGuard>
     </ThemeProvider>
   );
 }
