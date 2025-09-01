@@ -3,10 +3,5 @@
     "api/*.js": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "VITE_STRIPE_SECRET_KEY": "@stripe-secret-key",
-    "REACT_APP_GOOGLE_SHEET_ID": "@google-sheet-id",
-    "GOOGLE_SHEETS_CREDENTIALS": "@google-sheets-credentials"
   }
 }
