@@ -247,6 +247,26 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     currentY = kpiY + 35;
 
+    // Satisfaction section
+    checkPageBreak(35);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Satisfaction Formation', margin, currentY);
+    currentY += 12;
+
+    // Satisfaction box
+    pdf.setFillColor(255, 251, 235); // Light orange background
+    pdf.rect(margin, currentY, pageWidth - 2 * margin, 20, 'F');
+    pdf.setDrawColor(245, 158, 11);
+    pdf.rect(margin, currentY, pageWidth - 2 * margin, 20, 'S');
+    
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Note moyenne: ${stats.averageRating}/10`, margin + 5, currentY + 8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`(${stats.totalReviews} avis participants)`, margin + 5, currentY + 15);
+    currentY += 30;
+
     // Table section
     checkPageBreak(50);
     pdf.setFontSize(16);
@@ -304,6 +324,56 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
       
       currentY += 8;
     });
+
+    // Add space before profile section
+    currentY += 15;
+    
+    // Profil des participants section - moved to end before charts
+    checkPageBreak(80);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Profil des Participants', margin, currentY);
+    currentY += 12;
+
+    // Calculate participant profile percentages
+    const profileData = [
+      { label: 'Ancienneté Professionnelle', data: stats.columnE || [] },
+      { label: 'Secteur d\'Activité', data: stats.columnF || [] },
+      { label: 'Taille Entreprise', data: stats.columnG || [] },
+      { label: 'Canal d\'Acquisition', data: stats.columnAD || [] }
+    ];
+
+    profileData.forEach((profile) => {
+      if (profile.data.length === 0) return;
+      
+      const counts = profile.data.reduce((acc, item) => {
+        acc[item] = (acc[item] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const total = profile.data.length;
+      const topEntries = Object.entries(counts)
+        .map(([value, count]) => [value, Math.round((count / total) * 100)] as [string, number])
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3);
+
+      // Profile category header
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(profile.label + ':', margin, currentY);
+      currentY += 6;
+
+      topEntries.forEach(([value, percentage]) => {
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`• ${value}: ${percentage}%`, margin + 10, currentY);
+        currentY += 5;
+      });
+      
+      currentY += 3;
+    });
+
+    currentY += 10;
 
     // Add charts page
     try {
@@ -374,7 +444,7 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     }
   };
 
-  const generateWeeklyReport = async (pdf: jsPDF, pageWidth: number, _pageHeight: number, margin: number) => {
+  const generateWeeklyReport = async (pdf: jsPDF, pageWidth: number, pageHeight: number, margin: number) => {
     if (!stats) return;
     
     let currentY = 40;
@@ -463,6 +533,10 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     currentY += 45;
 
     // Recent weeks context (5 weeks)
+    if (currentY + 50 > pageHeight - 30) {
+      pdf.addPage();
+      currentY = 30;
+    }
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.text('Tendance Récente (5 dernières semaines)', margin, currentY);
@@ -501,6 +575,107 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
       
       currentY += 8;
     });
+
+    // Satisfaction section for weekly report
+    if (currentY + 25 > pageHeight - 30) {
+      pdf.addPage();
+      currentY = 30;
+    }
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Satisfaction Formation', margin, currentY);
+    currentY += 8;
+
+    // Satisfaction box
+    pdf.setFillColor(255, 251, 235); // Light orange background
+    pdf.rect(margin, currentY, pageWidth - 2 * margin, 15, 'F');
+    pdf.setDrawColor(245, 158, 11);
+    pdf.rect(margin, currentY, pageWidth - 2 * margin, 15, 'S');
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Note moyenne: ${stats.averageRating}/10 (${stats.totalReviews} avis)`, margin + 5, currentY + 10);
+    currentY += 25;
+
+    // Témoignages de la semaine
+    const weeklyTestimonials = stats.columnY?.filter(t => t && t.trim().length > 0) || [];
+    if (weeklyTestimonials.length > 0) {
+      if (currentY + 40 > pageHeight - 30) {
+        pdf.addPage();
+        currentY = 30;
+      }
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Témoignages Récents', margin, currentY);
+      currentY += 10;
+
+      // Show 2-3 recent testimonials
+      const recentTestimonials = weeklyTestimonials.slice(-3);
+      recentTestimonials.forEach((testimonial) => {
+        if (currentY + 25 > pageHeight - 30) {
+          pdf.addPage();
+          currentY = 30;
+        }
+        
+        // Testimonial box
+        pdf.setFillColor(248, 250, 252); // Light gray background
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'italic');
+        
+        // Clean testimonial text and fix encoding issues
+        const cleanTestimonial = testimonial
+          .replace(/[""]/g, '') // Remove smart quotes
+          .replace(/['']/g, "'") // Fix apostrophes
+          .replace(/…/g, '...') // Fix ellipsis
+          .replace(/–/g, '-') // Fix em dash
+          .replace(/\s+/g, ' ') // Normalize spaces
+          .trim();
+        const maxWidth = pageWidth - 2 * margin - 10;
+        const words = cleanTestimonial.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        // Better line breaking based on PDF width
+        const textWidth = (text: string) => pdf.getTextWidth(text);
+        
+        words.forEach(word => {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          if (textWidth(testLine) <= maxWidth - 10) {
+            currentLine = testLine;
+          } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+          }
+        });
+        if (currentLine) lines.push(currentLine);
+        
+        // Adjust testimonial height based on actual lines
+        const actualHeight = Math.max(lines.length * 4 + 8, 16);
+        
+        // Draw the box with correct height
+        pdf.rect(margin, currentY, pageWidth - 2 * margin, actualHeight, 'F');
+        pdf.setDrawColor(226, 232, 240);
+        pdf.rect(margin, currentY, pageWidth - 2 * margin, actualHeight, 'S');
+        
+        // Add opening quote
+        pdf.text('"', margin + 5, currentY + 6);
+        
+        // Add lines without extra quotes
+        lines.slice(0, 4).forEach((line, lineIndex) => {
+          pdf.text(line, margin + 8, currentY + 6 + (lineIndex * 4));
+        });
+        
+        // Add closing quote
+        const lastLineY = currentY + 6 + ((lines.length - 1) * 4);
+        const lastLineWidth = textWidth(lines[lines.length - 1] || '');
+        pdf.text('"', margin + 8 + lastLineWidth + 2, lastLineY);
+        
+        currentY += actualHeight + 5;
+      });
+      
+      currentY += 5;
+    }
 
     // Add charts for weekly report too
     try {
