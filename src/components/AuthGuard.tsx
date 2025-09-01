@@ -16,6 +16,7 @@ import {
   VisibilityOff,
   Lock,
   Person,
+  Logout,
 } from '@mui/icons-material';
 
 interface AuthGuardProps {
@@ -93,21 +94,21 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             zIndex: 1000,
           }}
         >
-          <Button
-            variant="outlined"
-            size="small"
+          <IconButton
             onClick={handleLogout}
             sx={{
-              color: 'text.secondary',
-              borderColor: 'divider',
-              '&:hover': {
-                borderColor: 'primary.main',
-                color: 'primary.main',
+              bgcolor: '#64748b',
+              color: 'white',
+              width: { xs: 40, sm: 48 },
+              height: { xs: 40, sm: 48 },
+              '&:hover': { 
+                bgcolor: '#475569',
+                transform: 'translateY(-1px)',
               },
             }}
           >
-            Déconnexion
-          </Button>
+            <Logout sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
+          </IconButton>
         </Box>
         {children}
       </Box>

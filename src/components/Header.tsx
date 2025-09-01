@@ -454,15 +454,29 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Tableau de Bord - Formation Stratégie
               </Typography>
-              <Typography 
-                variant="subtitle1" 
-                color="text.secondary"
-                sx={{
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
-                }}
-              >
-                Suivi des performances de vente en temps réel
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                <Typography 
+                  variant="subtitle1" 
+                  color="text.secondary"
+                  sx={{
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                  }}
+                >
+                  Suivi des performances de vente en temps réel
+                </Typography>
+                {lastUpdated && (
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary"
+                    sx={{
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    • Dernière MAJ: {formatDateLong(lastUpdated)}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           </Box>
           
@@ -473,18 +487,6 @@ export const Header: React.FC<HeaderProps> = ({
             flexWrap: { xs: 'wrap', sm: 'nowrap' },
             justifyContent: { xs: 'flex-start', sm: 'flex-end' },
           }}>
-            {lastUpdated && (
-              <Typography 
-                variant="caption" 
-                color="text.secondary"
-                sx={{
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                  display: { xs: 'none', sm: 'block' },
-                }}
-              >
-                Dernière MAJ: {formatDateLong(lastUpdated)}
-              </Typography>
-            )}
             <Tooltip title="Accéder à la plateforme Teachizy">
               <IconButton
                 onClick={() => window.open('https://app.teachizy.fr/', '_blank')}
