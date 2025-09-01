@@ -12,7 +12,7 @@ interface TestimonialsProps {
   loading?: boolean;
 }
 
-export const Testimonials: React.FC<TestimonialsProps> = ({ stats, loading }) => {
+export const Testimonials: React.FC<TestimonialsProps> = ({ stats }) => {
   if (!stats?.columnY || stats.columnY.length === 0) {
     return null;
   }
@@ -81,7 +81,7 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ stats, loading }) =>
                   transform: 'translateX(50%)',
                 },
                 '100%': {
-                  transform: `translateX(-${testimonials.length * 420}px)`,
+                  transform: `translateX(-${testimonials.length * 520}px)`,
                 },
               },
             }}
@@ -91,8 +91,8 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ stats, loading }) =>
                 key={index}
                 elevation={0}
                 sx={{
-                  minWidth: '400px',
-                  maxWidth: '400px',
+                  minWidth: '500px',
+                  maxWidth: '500px',
                   p: 3,
                   height: '220px',
                   display: 'flex',

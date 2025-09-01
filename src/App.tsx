@@ -87,7 +87,7 @@ function App() {
           <SurveyStats stats={stats} loading={loading} />
 
           {/* Testimonials Section */}
-          <Testimonials stats={stats} loading={loading} />
+          <Testimonials stats={stats} />
 
           {/* Export Section */}
           <Box

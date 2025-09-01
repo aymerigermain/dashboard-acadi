@@ -93,7 +93,7 @@ const StatsCard: React.FC<{
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {sortedEntries.map(([value, count, percentage], index) => (
+          {sortedEntries.map(([value, , percentage], index) => (
             <Box key={value} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography
                 variant="body2"
