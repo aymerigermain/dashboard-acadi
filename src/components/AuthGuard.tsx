@@ -84,35 +84,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   };
 
   if (isAuthenticated) {
-    return (
-      <Box>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            zIndex: 1000,
-          }}
-        >
-          <IconButton
-            onClick={handleLogout}
-            sx={{
-              bgcolor: '#64748b',
-              color: 'white',
-              width: { xs: 40, sm: 48 },
-              height: { xs: 40, sm: 48 },
-              '&:hover': { 
-                bgcolor: '#475569',
-                transform: 'translateY(-1px)',
-              },
-            }}
-          >
-            <Logout sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
-          </IconButton>
-        </Box>
-        {children}
-      </Box>
-    );
+    return <>{children}</>;
   }
 
   return (

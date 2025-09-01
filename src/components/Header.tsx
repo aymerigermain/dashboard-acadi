@@ -401,6 +401,7 @@ interface HeaderProps {
   onRefresh: () => void;
   lastUpdated: Date | null;
   onExport: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -409,6 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   lastUpdated,
   onExport,
+  onLogout,
 }) => {
   return (
     <Box 
@@ -452,7 +454,7 @@ export const Header: React.FC<HeaderProps> = ({
                   fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
                 }}
               >
-                Tableau de Bord - Formation Stratégie
+                Tableau de Bord
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                 <Typography 
@@ -540,6 +542,25 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </IconButton>
             </Tooltip>
+            {onLogout && (
+              <Tooltip title="Se déconnecter">
+                <IconButton
+                  onClick={onLogout}
+                  sx={{ 
+                    bgcolor: '#64748b', 
+                    color: 'white', 
+                    '&:hover': { 
+                      bgcolor: '#475569',
+                      transform: 'translateY(-1px)',
+                    },
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                  }}
+                >
+                  <Logout sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Box>
 

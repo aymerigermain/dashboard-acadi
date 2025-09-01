@@ -25,6 +25,11 @@ function App() {
   const { stats, chartData, loading, error, refetch, lastUpdated } = useStripeData();
   const exportButtonRef = useRef<ExportButtonRef>(null);
 
+  const handleLogout = () => {
+    localStorage.removeItem('acadi_dashboard_auth');
+    window.location.reload();
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -52,6 +57,7 @@ function App() {
           onRefresh={refetch}
           lastUpdated={lastUpdated}
           onExport={() => exportButtonRef.current?.handleExportClick()}
+          onLogout={handleLogout}
         />
 
         <Container maxWidth="xl" sx={{ pb: 4 }}>
