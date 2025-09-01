@@ -7,17 +7,48 @@ const stripe = new Stripe(process.env.VITE_STRIPE_SECRET_KEY);
 // Google Sheets helper function
 async function getSatisfactionData() {
   try {
-    // Parse credentials from environment variable
-    const credentials = JSON.parse(process.env.GOOGLE_SHEETS_CREDENTIALS);
+    // Check if Google Sheets credentials are available
+    const credentialsStr = process.env.GOOGLE_SHEETS_CREDENTIALS;
+    console.log('Google Sheets credentials available:', !!credentialsStr);
     
+    if (!credentialsStr) {
+      console.log('No Google Sheets credentials configured');
+      return { 
+        averageRating: 0, 
+        totalReviews: 0, 
+        columnE: [], 
+        columnF: [], 
+        columnG: [], 
+        columnY: [],
+        columnAD: [] 
+      };
+    }
+
+    // Parse credentials from environment variable
+    let credentials;
+    try {
+      credentials = JSON.parse(credentialsStr);
+      console.log('Google Sheets credentials parsed successfully');
+      console.log('Credentials type:', credentials.type);
+      console.log('Project ID:', credentials.project_id);
+      console.log('Client email:', credentials.client_email);
+      console.log('Private key available:', !!credentials.private_key);
+    } catch (parseError) {
+      console.error('Failed to parse Google Sheets credentials:', parseError);
+      throw new Error('Invalid Google Sheets credentials format');
+    }
+    
+    console.log('Creating Google Auth...');
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
     
+    console.log('Creating Google Sheets client...');
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = process.env.REACT_APP_GOOGLE_SHEET_ID;
     
+    console.log('Google Sheet ID:', spreadsheetId);
     if (!spreadsheetId) {
       console.log('No Google Sheet ID configured');
       return { 
@@ -31,11 +62,39 @@ async function getSatisfactionData() {
       };
     }
 
+    console.log('Attempting to fetch data from Google Sheets...');
+    console.log('Range: E:AD');
+    
     // Get data from multiple columns
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'E:AD', // Columns E through AD (includes Y)
-    });
+    let response;
+    try {
+      response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: 'E:AD', // Columns E through AD (includes Y)
+      });
+      console.log('Google Sheets API response received');
+      console.log('Response status:', response.status);
+      console.log('Data rows count:', response.data.values?.length || 0);
+    } catch (apiError) {
+      console.error('Google Sheets API error:', {
+        message: apiError.message,
+        code: apiError.code,
+        status: apiError.status,
+        details: apiError.details,
+        stack: apiError.stack
+      });
+      
+      // More specific error handling
+      if (apiError.code === 403) {
+        console.error('Permission denied - check service account permissions');
+      } else if (apiError.code === 404) {
+        console.error('Spreadsheet not found - check spreadsheet ID');
+      } else if (apiError.code === 401) {
+        console.error('Authentication failed - check credentials');
+      }
+      
+      throw new Error(`Google Sheets API error: ${apiError.message}`);
+    }
 
     const values = response.data.values || [];
     if (values.length === 0) {
