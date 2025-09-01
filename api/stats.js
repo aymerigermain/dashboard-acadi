@@ -7,12 +7,18 @@ const stripe = new Stripe(process.env.VITE_STRIPE_SECRET_KEY);
 // Google Sheets helper function
 async function getSatisfactionData() {
   try {
-    // Check if Google Sheets credentials are available
-    const credentialsStr = process.env.GOOGLE_SHEETS_CREDENTIALS;
-    console.log('Google Sheets credentials available:', !!credentialsStr);
+    // Check if Google Sheets credentials are available via individual env vars
+    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    const projectId = process.env.GOOGLE_PROJECT_ID;
     
-    if (!credentialsStr) {
-      console.log('No Google Sheets credentials configured');
+    console.log('Google Sheets environment variables check:');
+    console.log('- GOOGLE_CLIENT_EMAIL:', !!clientEmail);
+    console.log('- GOOGLE_PRIVATE_KEY:', !!privateKey);
+    console.log('- GOOGLE_PROJECT_ID:', !!projectId);
+    
+    if (!clientEmail || !privateKey || !projectId) {
+      console.log('Missing Google Sheets credentials - skipping Google Sheets data');
       return { 
         averageRating: 0, 
         totalReviews: 0, 
@@ -24,19 +30,22 @@ async function getSatisfactionData() {
       };
     }
 
-    // Parse credentials from environment variable
-    let credentials;
-    try {
-      credentials = JSON.parse(credentialsStr);
-      console.log('Google Sheets credentials parsed successfully');
-      console.log('Credentials type:', credentials.type);
-      console.log('Project ID:', credentials.project_id);
-      console.log('Client email:', credentials.client_email);
-      console.log('Private key available:', !!credentials.private_key);
-    } catch (parseError) {
-      console.error('Failed to parse Google Sheets credentials:', parseError);
-      throw new Error('Invalid Google Sheets credentials format');
-    }
+    // Build credentials object from individual env vars
+    const credentials = {
+      type: "service_account",
+      project_id: projectId,
+      private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+      private_key: privateKey.replace(/\\n/g, '\n'),
+      client_email: clientEmail,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      auth_uri: "https://accounts.google.com/o/oauth2/auth",
+      token_uri: "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`,
+      universe_domain: "googleapis.com"
+    };
+    
+    console.log('Google Sheets credentials built from env vars successfully');
     
     console.log('Creating Google Auth...');
     const auth = new google.auth.GoogleAuth({
