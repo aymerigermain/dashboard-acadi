@@ -15,6 +15,7 @@ import {
   Star,
   OpenInNew,
   Launch,
+  Logout,
 } from '@mui/icons-material';
 import type { DashboardStats } from '../types';
 import { formatCurrency, formatDateLong } from '../utils/dateUtils';

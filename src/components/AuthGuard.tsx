@@ -16,7 +16,6 @@ import {
   VisibilityOff,
   Lock,
   Person,
-  Logout,
 } from '@mui/icons-material';
 
 interface AuthGuardProps {
@@ -76,12 +75,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     setLoading(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setIsAuthenticated(false);
-    setUsername('');
-    setPassword('');
-  };
 
   if (isAuthenticated) {
     return <>{children}</>;
