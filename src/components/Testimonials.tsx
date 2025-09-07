@@ -5,6 +5,7 @@ import {
   Container,
 } from '@mui/material';
 import { FormatQuote } from '@mui/icons-material';
+import { useState, useRef, useEffect } from 'react';
 import type { DashboardStats } from '../types';
 
 interface TestimonialsProps {
@@ -13,15 +14,148 @@ interface TestimonialsProps {
 }
 
 export const Testimonials: React.FC<TestimonialsProps> = ({ stats }) => {
-  if (!stats?.columnY || stats.columnY.length === 0) {
-    return null;
-  }
+  const [isPaused, setIsPaused] = useState(false);
+  const [manualPosition, setManualPosition] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startPosition = useRef(0);
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const testimonials = stats.columnY.filter(testimonial => 
+  const testimonials = stats?.columnY?.filter(testimonial => 
     testimonial && testimonial.trim().length > 0
-  );
+  ) || [];
 
-  if (testimonials.length === 0) {
+  const totalWidth = testimonials.length * 520;
+
+  const resetPauseTimeout = () => {
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+    pauseTimeoutRef.current = setTimeout(() => {
+      setIsPaused(false);
+      // Ne remet pas à 0 pour éviter de recommencer au début
+    }, 3000);
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setIsPaused(true);
+      
+      const sensitivity = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+      const containerWidth = container.offsetWidth;
+      const maxLeft = -(totalWidth - containerWidth + 100); // +100 pour voir le dernier témoignage
+      const maxRight = containerWidth * 0.2; // Permet de voir le début
+      
+      const newPosition = Math.max(
+        maxLeft,
+        Math.min(maxRight, manualPosition - sensitivity * 2)
+      );
+      setManualPosition(newPosition);
+      resetPauseTimeout();
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      startX.current = e.clientX;
+      startPosition.current = manualPosition;
+      setIsPaused(true);
+      container.style.cursor = 'grabbing';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      
+      const deltaX = e.clientX - startX.current;
+      const containerWidth = container.offsetWidth;
+      const maxLeft = -(totalWidth - containerWidth + 100);
+      const maxRight = containerWidth * 0.2;
+      
+      const newPosition = Math.max(
+        maxLeft,
+        Math.min(maxRight, startPosition.current + deltaX)
+      );
+      setManualPosition(newPosition);
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      container.style.cursor = 'grab';
+      resetPauseTimeout();
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      startX.current = e.touches[0].clientX;
+      startPosition.current = manualPosition;
+      setIsPaused(true);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      
+      const deltaX = e.touches[0].clientX - startX.current;
+      const containerWidth = container.offsetWidth;
+      const maxLeft = -(totalWidth - containerWidth + 100);
+      const maxRight = containerWidth * 0.2;
+      
+      const newPosition = Math.max(
+        maxLeft,
+        Math.min(maxRight, startPosition.current + deltaX)
+      );
+      setManualPosition(newPosition);
+    };
+
+    const handleTouchEnd = () => {
+      isDragging.current = false;
+      resetPauseTimeout();
+    };
+
+    const handleMouseEnter = () => {
+      setIsPaused(true);
+    };
+
+    const handleMouseLeave = () => {
+      if (!isDragging.current) {
+        setIsPaused(false);
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+      }
+    };
+  }, [manualPosition, totalWidth]);
+
+  if (!stats?.columnY || testimonials.length === 0) {
     return null;
   }
 
@@ -45,11 +179,14 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ stats }) => {
         </Typography>
 
         <Box
+          ref={containerRef}
           sx={{
             position: 'relative',
             overflow: 'hidden',
             width: '100%',
             height: '280px',
+            cursor: 'grab',
+            userSelect: 'none',
             '&::before, &::after': {
               content: '""',
               position: 'absolute',
@@ -70,20 +207,29 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ stats }) => {
           }}
         >
           <Box
+            ref={scrollRef}
             sx={{
               display: 'flex',
               gap: 3,
-              animation: 'scroll 80s linear infinite',
               alignItems: 'center',
               height: '100%',
-              '@keyframes scroll': {
-                '0%': {
-                  transform: 'translateX(50%)',
-                },
-                '100%': {
-                  transform: `translateX(-${testimonials.length * 520}px)`,
-                },
-              },
+              ...(isPaused 
+                ? {
+                    transform: `translateX(${manualPosition}px)`,
+                    transition: 'transform 0.2s ease-out',
+                  }
+                : {
+                    animation: 'scroll 80s linear infinite',
+                    '@keyframes scroll': {
+                      '0%': {
+                        transform: 'translateX(50%)',
+                      },
+                      '100%': {
+                        transform: `translateX(-${totalWidth}px)`,
+                      },
+                    },
+                  }
+              ),
             }}
           >
             {testimonials.map((testimonial, index) => (
@@ -141,7 +287,8 @@ export const Testimonials: React.FC<TestimonialsProps> = ({ stats }) => {
         <Box sx={{ mt: 2, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
             {testimonials.length} témoignage{testimonials.length > 1 ? 's' : ''} • 
-            Les avis défilent automatiquement
+            {isPaused ? 'Défilement en pause' : 'Les avis défilent automatiquement'} • 
+            Faites défiler avec la souris ou le doigt
           </Typography>
         </Box>
       </Container>
