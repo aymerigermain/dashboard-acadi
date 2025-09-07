@@ -46,14 +46,28 @@ async function getSatisfactionData() {
 
     const values = response.data.values || [];
     if (values.length === 0) {
-      return { averageRating: 0, totalReviews: 0, columnE: [], columnF: [], columnG: [], columnAD: [], columnY: [] };
+      return { 
+        averageRating: 0, 
+        totalReviews: 0, 
+        columnE: [], 
+        columnF: [], 
+        columnG: [], 
+        columnW: [],
+        columnY: [], 
+        columnAD: [],
+        netPromoterScore: 0,
+        npsPromotors: 0,
+        npsDetractors: 0,
+        npsPassives: 0
+      };
     }
 
-    // Extract data by column (0-indexed: E=0, F=1, G=2, O=10, Y=20, AD=25)
+    // Extract data by column (0-indexed: E=0, F=1, G=2, O=10, W=18, Y=20, AD=25)
     const columnE = values.slice(1).map(row => row[0]).filter(val => val !== undefined && val !== '');
     const columnF = values.slice(1).map(row => row[1]).filter(val => val !== undefined && val !== '');
     const columnG = values.slice(1).map(row => row[2]).filter(val => val !== undefined && val !== '');
     const columnO = values.slice(1).map(row => row[10]).filter(val => val !== undefined && val !== '');
+    const columnW = values.slice(1).map(row => row[18]).filter(val => val !== undefined && val !== ''); // NPS scores
     const columnY = values.slice(1).map(row => row[20]).filter(val => val !== undefined && val !== '');
     const columnAD = values.slice(1).map(row => row[25]).filter(val => val !== undefined && val !== '');
 
@@ -67,21 +81,49 @@ async function getSatisfactionData() {
       ? ratings.reduce((sum, rating) => sum + rating, 0) / totalReviews 
       : 0;
 
+    console.log(`DEBUG satisfaction: Raw ratings [${ratings.join(', ')}]`);
+    console.log(`DEBUG satisfaction: Sum = ${ratings.reduce((sum, rating) => sum + rating, 0)}, Count = ${totalReviews}`);
+    console.log(`DEBUG satisfaction: Exact average = ${averageRating} (no rounding applied)`);
+
+    // Process NPS scores from column W
+    const npsScores = columnW
+      .map(val => parseFloat(val))
+      .filter(score => !isNaN(score) && score >= 0 && score <= 10);
+
+    // Calculate NPS metrics
+    const npsPromotors = npsScores.filter(score => score >= 9).length;
+    const npsDetractors = npsScores.filter(score => score <= 6).length;
+    const npsPassives = npsScores.filter(score => score >= 7 && score <= 8).length;
+    const totalNpsResponses = npsScores.length;
+    
+    // NPS formula: ((Promotors - Detractors) / Total Responses) * 100
+    const netPromoterScore = totalNpsResponses > 0 
+      ? Math.round(((npsPromotors - npsDetractors) / totalNpsResponses) * 100) 
+      : 0;
+
     console.log(`Found ${totalReviews} satisfaction ratings, average: ${averageRating.toFixed(1)}/10`);
+    console.log(`Found ${totalNpsResponses} NPS scores, NPS: ${netPromoterScore}`);
+    console.log(`NPS breakdown - Promotors: ${npsPromotors}, Passives: ${npsPassives}, Detractors: ${npsDetractors}`);
     console.log(`Column E: ${columnE.length} entries`);
     console.log(`Column F: ${columnF.length} entries`);
     console.log(`Column G: ${columnG.length} entries`);
+    console.log(`Column W - NPS: ${columnW.length} entries - [${columnW.slice(0, 10).join(', ')}]`);
     console.log(`Column Y: ${columnY.length} testimonials`);
     console.log(`Column AD: ${columnAD.length} entries`);
     
     return {
-      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+      averageRating: averageRating, // Keep full precision
       totalReviews,
       columnE,
       columnF,
       columnG,
+      columnW: npsScores,
       columnY,
-      columnAD
+      columnAD,
+      netPromoterScore,
+      npsPromotors,
+      npsDetractors,
+      npsPassives
     };
   } catch (error) {
     console.error('Error fetching satisfaction data:', error);
@@ -91,8 +133,13 @@ async function getSatisfactionData() {
       columnE: [], 
       columnF: [], 
       columnG: [], 
+      columnW: [],
       columnY: [],
-      columnAD: [] 
+      columnAD: [],
+      netPromoterScore: 0,
+      npsPromotors: 0,
+      npsDetractors: 0,
+      npsPassives: 0
     };
   }
 }
@@ -427,8 +474,15 @@ app.get('/api/stats', async (req, res) => {
         columnE: satisfactionData.columnE,
         columnF: satisfactionData.columnF,
         columnG: satisfactionData.columnG,
+        columnW: satisfactionData.columnW,
         columnY: satisfactionData.columnY,
-        columnAD: satisfactionData.columnAD
+        columnAD: satisfactionData.columnAD,
+        
+        // NPS metrics
+        netPromoterScore: satisfactionData.netPromoterScore,
+        npsPromotors: satisfactionData.npsPromotors,
+        npsDetractors: satisfactionData.npsDetractors,
+        npsPassives: satisfactionData.npsPassives
       }
     });
 

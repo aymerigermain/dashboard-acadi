@@ -10,6 +10,15 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+export const formatCurrencyWithDecimals = (amount: number): string => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
 export const formatDate = (date: Date | string | number): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
   return format(dateObj, 'dd/MM/yyyy', { locale: fr });

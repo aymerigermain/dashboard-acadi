@@ -25,8 +25,13 @@ async function getSatisfactionData() {
         columnE: [], 
         columnF: [], 
         columnG: [], 
+        columnW: [],
         columnY: [],
-        columnAD: [] 
+        columnAD: [],
+        netPromoterScore: 0,
+        npsPromotors: 0,
+        npsDetractors: 0,
+        npsPassives: 0
       };
     }
 
@@ -66,13 +71,32 @@ async function getSatisfactionData() {
         columnE: [], 
         columnF: [], 
         columnG: [], 
+        columnW: [],
         columnY: [],
-        columnAD: [] 
+        columnAD: [],
+        netPromoterScore: 0,
+        npsPromotors: 0,
+        npsDetractors: 0,
+        npsPassives: 0
       };
     }
 
     console.log('Attempting to fetch data from Google Sheets...');
+    console.log('Spreadsheet URL: https://docs.google.com/spreadsheets/d/' + spreadsheetId);
     console.log('Range: E:AD');
+    
+    // First, let's try to get basic sheet info
+    try {
+      const sheetInfo = await sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties'
+      });
+      console.log('Available sheets:', sheetInfo.data.sheets.map(s => s.properties.title));
+    } catch (infoError) {
+      console.error('Cannot access spreadsheet info:', infoError.message);
+      console.error('Make sure the REACT_APP_GOOGLE_SHEET_ID is the ID of a Google Sheets (not Google Forms)');
+      console.error('The ID should come from a URL like: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit');
+    }
     
     // Get data from multiple columns
     let response;
@@ -107,38 +131,94 @@ async function getSatisfactionData() {
 
     const values = response.data.values || [];
     if (values.length === 0) {
-      return { averageRating: 0, totalReviews: 0, columnE: [], columnF: [], columnG: [], columnAD: [], columnY: [] };
+      return { 
+        averageRating: 0, 
+        totalReviews: 0, 
+        columnE: [], 
+        columnF: [], 
+        columnG: [], 
+        columnW: [],
+        columnY: [], 
+        columnAD: [],
+        netPromoterScore: 0,
+        npsPromotors: 0,
+        npsDetractors: 0,
+        npsPassives: 0
+      };
     }
 
-    // Extract data by column (0-indexed: E=0, F=1, G=2, O=10, Y=20, AD=25)
+    // Extract data by column (0-indexed: E=0, F=1, G=2, O=10, W=18, X=19, Y=20, AD=25)
     const columnE = values.slice(1).map(row => row[0]).filter(val => val !== undefined && val !== '');
     const columnF = values.slice(1).map(row => row[1]).filter(val => val !== undefined && val !== '');
     const columnG = values.slice(1).map(row => row[2]).filter(val => val !== undefined && val !== '');
     const columnO = values.slice(1).map(row => row[10]).filter(val => val !== undefined && val !== '');
+    const columnW = values.slice(1).map(row => row[18]).filter(val => val !== undefined && val !== ''); // NPS scores (recommandation)
+    const columnX = values.slice(1).map(row => row[19]).filter(val => val !== undefined && val !== ''); // Note globale satisfaction
     const columnY = values.slice(1).map(row => row[20]).filter(val => val !== undefined && val !== '');
     const columnAD = values.slice(1).map(row => row[25]).filter(val => val !== undefined && val !== '');
 
-    // Process ratings from column O
-    const ratings = columnO
+    // Try both column O and column X for satisfaction ratings
+    let ratings = columnO
       .map(val => parseFloat(val))
       .filter(rating => !isNaN(rating) && rating >= 0 && rating <= 10);
+    
+    // If column O is empty or has no valid ratings, try column X
+    if (ratings.length === 0) {
+      ratings = columnX
+        .map(val => parseFloat(val))
+        .filter(rating => !isNaN(rating) && rating >= 0 && rating <= 10);
+    }
 
     const totalReviews = ratings.length;
     const averageRating = totalReviews > 0 
       ? ratings.reduce((sum, rating) => sum + rating, 0) / totalReviews 
       : 0;
 
+    // Process NPS scores from column W
+    const npsScores = columnW
+      .map(val => parseFloat(val))
+      .filter(score => !isNaN(score) && score >= 0 && score <= 10);
+
+    // Calculate NPS metrics
+    const npsPromotors = npsScores.filter(score => score >= 9).length;
+    const npsDetractors = npsScores.filter(score => score <= 6).length;
+    const npsPassives = npsScores.filter(score => score >= 7 && score <= 8).length;
+    const totalNpsResponses = npsScores.length;
+    
+    // NPS formula: ((Promotors - Detractors) / Total Responses) * 100
+    const netPromoterScore = totalNpsResponses > 0 
+      ? Math.round(((npsPromotors - npsDetractors) / totalNpsResponses) * 100) 
+      : 0;
+
+    console.log(`Column data extraction:`);
+    console.log(`- Column E (${columnE.length} entries):`, columnE.slice(0, 3));
+    console.log(`- Column F (${columnF.length} entries):`, columnF.slice(0, 3));
+    console.log(`- Column G (${columnG.length} entries):`, columnG.slice(0, 3));
+    console.log(`- Column O (${columnO.length} entries):`, columnO.slice(0, 10));
+    console.log(`- Column W - NPS (${columnW.length} entries):`, columnW.slice(0, 10));
+    console.log(`- Column X - Satisfaction (${columnX.length} entries):`, columnX.slice(0, 10));
+    console.log(`- Column Y - Testimonials (${columnY.length} entries):`, columnY.slice(0, 3));
+    console.log(`- Column AD (${columnAD.length} entries):`, columnAD.slice(0, 3));
+    
+    console.log(`Processed ratings: ${ratings.length} ratings from [${ratings.join(', ')}]`);
+    console.log(`Processed NPS scores: ${npsScores.length} scores from [${npsScores.join(', ')}]`);
     console.log(`Found ${totalReviews} satisfaction ratings, average: ${averageRating.toFixed(1)}/10`);
-    console.log(`Column Y: ${columnY.length} testimonials`);
+    console.log(`Found ${totalNpsResponses} NPS scores, NPS: ${netPromoterScore}`);
+    console.log(`NPS breakdown - Promotors: ${npsPromotors}, Passives: ${npsPassives}, Detractors: ${npsDetractors}`);
     
     return {
-      averageRating: Math.round(averageRating * 10) / 10,
+      averageRating: averageRating, // Keep full precision
       totalReviews,
       columnE,
       columnF,
       columnG,
+      columnW: npsScores,
       columnY,
-      columnAD
+      columnAD,
+      netPromoterScore,
+      npsPromotors,
+      npsDetractors,
+      npsPassives
     };
   } catch (error) {
     console.error('Error fetching satisfaction data:', error);
@@ -148,8 +228,13 @@ async function getSatisfactionData() {
       columnE: [], 
       columnF: [], 
       columnG: [], 
+      columnW: [],
       columnY: [],
-      columnAD: [] 
+      columnAD: [],
+      netPromoterScore: 0,
+      npsPromotors: 0,
+      npsDetractors: 0,
+      npsPassives: 0
     };
   }
 }
@@ -366,8 +451,13 @@ export default async function handler(req, res) {
         columnE: satisfactionData.columnE,
         columnF: satisfactionData.columnF,
         columnG: satisfactionData.columnG,
+        columnW: satisfactionData.columnW,
         columnY: satisfactionData.columnY,
-        columnAD: satisfactionData.columnAD
+        columnAD: satisfactionData.columnAD,
+        netPromoterScore: satisfactionData.netPromoterScore,
+        npsPromotors: satisfactionData.npsPromotors,
+        npsDetractors: satisfactionData.npsDetractors,
+        npsPassives: satisfactionData.npsPassives
       }
     });
 

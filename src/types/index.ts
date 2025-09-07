@@ -48,8 +48,15 @@ export interface DashboardStats {
   columnE: string[]; // Ancienneté professionnelle
   columnF: string[]; // Secteur d'activité
   columnG: string[]; // Taille entreprise
+  columnW: number[]; // Net Promoter Score (NPS)
   columnY: string[]; // Témoignages
   columnAD: string[]; // Canal d'acquisition
+  
+  // NPS metrics
+  netPromoterScore: number; // Calculated NPS score
+  npsPromotors: number; // Number of promotors (9-10)
+  npsDetractors: number; // Number of detractors (0-6)
+  npsPassives: number; // Number of passives (7-8)
 }
 
 export interface ApiResponse<T> {
