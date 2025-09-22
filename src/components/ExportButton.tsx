@@ -262,7 +262,7 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Note moyenne: ${stats.averageRating}/10`, margin + 5, currentY + 8);
+    pdf.text(`Note moyenne: ${stats.averageRating.toFixed(2)}/10`, margin + 5, currentY + 8);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`(${stats.totalReviews} avis participants)`, margin + 5, currentY + 15);
     currentY += 30;
@@ -594,7 +594,7 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Note moyenne: ${stats.averageRating}/10 (${stats.totalReviews} avis)`, margin + 5, currentY + 10);
+    pdf.text(`Note moyenne: ${stats.averageRating.toFixed(2)}/10 (${stats.totalReviews} avis)`, margin + 5, currentY + 10);
     currentY += 25;
 
     // Témoignages de la semaine
