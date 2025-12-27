@@ -9,7 +9,6 @@ import {
 } from '@mui/material';
 import {
   EuroSymbol,
-  Euro,
   People,
   Refresh,
   PictureAsPdf,

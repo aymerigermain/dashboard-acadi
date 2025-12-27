@@ -179,7 +179,8 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Performance globale: ${formatCurrencyPDF(stats.netRevenue)} de CA net`, margin + 5, currentY + 18);
+    const totalNetRevenue = stats.netRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0);
+    pdf.text(`Performance globale: ${formatCurrencyPDF(totalNetRevenue)} de CA net`, margin + 5, currentY + 18);
     currentY += 35;
 
     // Financial KPIs Section
@@ -195,7 +196,10 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     let kpiY = currentY;
     
-    // CA Brut
+    // CA Brut (with external revenues)
+    const totalGrossRevenue = stats.grossRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0);
+    const externalRevenue = stats.externalRevenuesMetrics?.totalRevenue || 0;
+
     pdf.setFillColor(240, 253, 244); // Light green background
     pdf.rect(margin, kpiY, kpiBoxWidth, kpiBoxHeight, 'F');
     pdf.setDrawColor(16, 185, 129);
@@ -203,22 +207,34 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('CA Brut:', margin + 3, kpiY + 10);
+    pdf.text('CA Brut:', margin + 3, kpiY + 8);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(formatCurrencyPDF(stats.grossRevenue), margin + 3, kpiY + 17);
+    pdf.text(formatCurrencyPDF(totalGrossRevenue), margin + 3, kpiY + 14);
+    if (externalRevenue > 0) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`dont ${formatCurrencyPDF(externalRevenue)} hors plateforme`, margin + 3, kpiY + 19);
+      pdf.setTextColor(0, 0, 0);
+    }
     
-    // CA Net (right column)
+    // CA Net (right column, with external revenues)
     pdf.setFillColor(239, 246, 255); // Light blue background
     pdf.rect(margin + kpiBoxWidth + 5, kpiY, kpiBoxWidth, kpiBoxHeight, 'F');
     pdf.setDrawColor(4, 150, 255);
     pdf.rect(margin + kpiBoxWidth + 5, kpiY, kpiBoxWidth, kpiBoxHeight, 'S');
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('CA Net:', margin + kpiBoxWidth + 8, kpiY + 10);
+    pdf.text('CA Net:', margin + kpiBoxWidth + 8, kpiY + 8);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(formatCurrencyPDF(stats.netRevenue), margin + kpiBoxWidth + 8, kpiY + 17);
+    pdf.text(formatCurrencyPDF(totalNetRevenue), margin + kpiBoxWidth + 8, kpiY + 14);
+    if (externalRevenue > 0) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`dont ${formatCurrencyPDF(externalRevenue)} hors plateforme`, margin + kpiBoxWidth + 8, kpiY + 19);
+      pdf.setTextColor(0, 0, 0);
+    }
     kpiY += 27;
     
     // Remboursements
@@ -266,6 +282,97 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     pdf.setFont('helvetica', 'normal');
     pdf.text(`(${stats.totalReviews} avis participants)`, margin + 5, currentY + 15);
     currentY += 30;
+
+    // External Revenues section
+    if (stats.externalRevenues && stats.externalRevenues.length > 0) {
+      checkPageBreak(60);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Achats Licences Hors Plateforme', margin, currentY);
+      currentY += 12;
+
+      // External revenues summary box
+      pdf.setFillColor(248, 250, 252); // Light gray background
+      pdf.rect(margin, currentY, pageWidth - 2 * margin, 22, 'F');
+      pdf.setDrawColor(100, 116, 139);
+      pdf.rect(margin, currentY, pageWidth - 2 * margin, 22, 'S');
+
+      const totalExternalLicenses = stats.externalRevenuesMetrics.totalLicenses || 0;
+      const totalExternalRevenue = stats.externalRevenuesMetrics.totalRevenue || 0;
+      const totalExternalPurchases = stats.externalRevenuesMetrics.totalPurchases || 0;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Total: ${formatCurrencyPDF(totalExternalRevenue)}`, margin + 5, currentY + 8);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${totalExternalLicenses} licences vendues • ${totalExternalPurchases} achat(s)`, margin + 5, currentY + 16);
+      currentY += 30;
+
+      // Compact table for external purchases (top 10 most recent)
+      const recentExternalPurchases = stats.externalRevenues
+        .filter(p => p.date)
+        .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+        .slice(0, 10);
+
+      if (recentExternalPurchases.length > 0) {
+        const extTableY = currentY;
+        const extColWidths = [35, 12, 20, 20, 25];
+        const extColX = [
+          margin,
+          margin + extColWidths[0],
+          margin + extColWidths[0] + extColWidths[1],
+          margin + extColWidths[0] + extColWidths[1] + extColWidths[2],
+          margin + extColWidths[0] + extColWidths[1] + extColWidths[2] + extColWidths[3]
+        ];
+
+        // Table header
+        pdf.setFillColor(100, 116, 139); // Slate gray
+        pdf.rect(margin, extTableY, pageWidth - 2 * margin, 8, 'F');
+
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Produit', extColX[0] + 2, extTableY + 5.5);
+        pdf.text('Qté', extColX[1] + 2, extTableY + 5.5);
+        pdf.text('Prix Unit.', extColX[2] + 2, extTableY + 5.5);
+        pdf.text('Total', extColX[3] + 2, extTableY + 5.5);
+        pdf.text('Date', extColX[4] + 2, extTableY + 5.5);
+
+        pdf.setTextColor(0, 0, 0);
+        currentY = extTableY + 12;
+
+        // Table rows
+        recentExternalPurchases.forEach((purchase, index) => {
+          checkPageBreak(7);
+
+          if (index % 2 === 0) {
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(margin, currentY - 2.5, pageWidth - 2 * margin, 7, 'F');
+          }
+
+          pdf.setFontSize(7);
+          pdf.setFont('helvetica', 'normal');
+
+          // Truncate product name if too long
+          const productName = purchase.produit.length > 28 ? purchase.produit.substring(0, 25) + '...' : purchase.produit;
+          pdf.text(productName, extColX[0] + 2, currentY + 2.5);
+          pdf.text(purchase.quantite.toString(), extColX[1] + 2, currentY + 2.5);
+          pdf.text(formatCurrencyPDF(purchase.prixUnitaire).replace(' EUR', '€'), extColX[2] + 2, currentY + 2.5);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(formatCurrencyPDF(purchase.total).replace(' EUR', '€'), extColX[3] + 2, currentY + 2.5);
+          pdf.setFont('helvetica', 'normal');
+
+          // Format date to DD/MM/YYYY
+          const dateStr = purchase.date ? new Date(purchase.date).toLocaleDateString('fr-FR') : '-';
+          pdf.text(dateStr, extColX[4] + 2, currentY + 2.5);
+
+          currentY += 7;
+        });
+
+        currentY += 10;
+      }
+    }
 
     // Table section
     checkPageBreak(50);
@@ -507,7 +614,7 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Nouveaux Clients: ${selectedWeekData.sales}`, margin + 5, currentY + 25);
+    pdf.text(`Nouvelles Licences: ${selectedWeekData.sales}`, margin + 5, currentY + 25);
     pdf.text(`CA Brut: ${formatCurrencyPDF(weeklyStats.grossRevenue || selectedWeekData.revenue)}`, margin + 5, currentY + 35);
     pdf.text(`CA Net: ${formatCurrencyPDF(weeklyStats.netRevenue || selectedWeekData.revenue)}`, margin + 5, currentY + 45);
     pdf.text(`Remboursements: ${formatCurrencyPDF(weeklyStats.refunds || 0)}`, margin + 90, currentY + 25);
@@ -524,11 +631,14 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     pdf.setFillColor(248, 250, 252);
     pdf.rect(margin, currentY, pageWidth - 2 * margin, 35, 'F');
     
+    const totalLicenses = stats.totalCustomers + (stats.externalRevenuesMetrics?.totalLicenses || 0);
+    const totalNetRevenueWeekly = stats.netRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0);
+
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Total periode: ${formatCurrencyPDF(stats.netRevenue)} CA net`, margin + 5, currentY + 10);
-    pdf.text(`${stats.totalCustomers} apprenants sur ${chartData.length} semaines`, margin + 5, currentY + 18);
-    pdf.text(`Nombre total d'apprenants: ${stats.totalCustomers}`, margin + 5, currentY + 26);
+    pdf.text(`Total periode: ${formatCurrencyPDF(totalNetRevenueWeekly)} CA net`, margin + 5, currentY + 10);
+    pdf.text(`${totalLicenses} licences sur ${chartData.length} semaines`, margin + 5, currentY + 18);
+    pdf.text(`Nombre total de licences: ${totalLicenses}`, margin + 5, currentY + 26);
     
     currentY += 45;
 
