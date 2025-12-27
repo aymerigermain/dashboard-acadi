@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"vite\"",
-    "server": "node server.cjs",
+    "server": "node dev-server.cjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server.cjs"
+    "start": "node dev-server.cjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
