@@ -527,8 +527,8 @@ export const ExportButton = forwardRef<ExportButtonRef, ExportButtonProps>(({
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Total periode: ${formatCurrencyPDF(stats.netRevenue)} CA net`, margin + 5, currentY + 10);
-    pdf.text(`${stats.totalCustomers} clients sur ${chartData.length} semaines`, margin + 5, currentY + 18);
-    pdf.text(`Nombre total de clients: ${stats.totalCustomers}`, margin + 5, currentY + 26);
+    pdf.text(`${stats.totalCustomers} apprenants sur ${chartData.length} semaines`, margin + 5, currentY + 18);
+    pdf.text(`Nombre total d'apprenants: ${stats.totalCustomers}`, margin + 5, currentY + 26);
     
     currentY += 45;
 

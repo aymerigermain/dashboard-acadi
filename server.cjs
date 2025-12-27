@@ -144,6 +144,104 @@ async function getSatisfactionData() {
   }
 }
 
+// Get external revenues data from Google Sheets
+async function getExternalRevenuesData() {
+  try {
+    const spreadsheetId = process.env.REACT_APP_GOOGLE_SHEET_ID_EXTERNAL_REVENUES;
+    if (!spreadsheetId) {
+      console.warn('REACT_APP_GOOGLE_SHEET_ID_EXTERNAL_REVENUES not configured - skipping external revenues');
+      return {
+        purchases: [],
+        metrics: {
+          totalRevenue: 0,
+          totalPurchases: 0,
+          totalLicenses: 0,
+          averagePurchase: 0
+        }
+      };
+    }
+
+    // Get data from columns A to J (skip header row)
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Achats!A2:J',
+    });
+
+    const rows = response.data.values || [];
+
+    const purchases = rows
+      .filter(row => row.length >= 4) // Ensure minimum required columns (at least produit, prix, quantité, total)
+      .map(row => {
+        // Parse French date format DD/MM/YYYY
+        const dateStr = row[8] || ''; // Column I (Date)
+        let parsedDate = null;
+        if (dateStr && dateStr.includes('/')) {
+          const [day, month, year] = dateStr.split('/');
+          if (day && month && year) {
+            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        }
+
+        // Parse French number format (replace comma with dot)
+        const parseNumber = (value) => {
+          if (!value) return 0;
+          const normalized = String(value).replace(',', '.');
+          return parseFloat(normalized) || 0;
+        };
+
+        return {
+          produit: row[0] || '',                             // Column A
+          prixUnitaire: parseNumber(row[1]),                 // Column B
+          quantite: parseInt(row[2] || '0'),                 // Column C
+          total: parseNumber(row[3]),                        // Column D
+          acheteur: row[4] || '',                            // Column E
+          contactFormateur: row[5] || '',                    // Column F
+          contactFinanceur: row[6] || '',                    // Column G
+          cadre: row[7] || '',                               // Column H
+          date: parsedDate ? parsedDate.toISOString() : null, // Column I
+          remarques: row[9] || '',                           // Column J
+        };
+      })
+      .filter(purchase => purchase.total > 0); // Only include purchases with positive totals
+
+    // Calculate total revenue
+    const totalRevenue = purchases.reduce((sum, purchase) => sum + purchase.total, 0);
+
+    // Count total purchases (number of rows)
+    const totalPurchases = purchases.length;
+
+    // Calculate total licenses (sum of quantities)
+    const totalLicenses = purchases.reduce((sum, purchase) => sum + purchase.quantite, 0);
+
+    // Calculate average purchase value
+    const averagePurchase = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
+
+    console.log(`Found ${totalPurchases} external purchases, ${totalLicenses} licenses, total revenue: ${totalRevenue.toFixed(2)}€`);
+    console.log(`Average purchase value: ${averagePurchase.toFixed(2)}€`);
+
+    return {
+      purchases,
+      metrics: {
+        totalRevenue,
+        totalPurchases,
+        totalLicenses,
+        averagePurchase
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching external revenues data:', error);
+    return {
+      purchases: [],
+      metrics: {
+        totalRevenue: 0,
+        totalPurchases: 0,
+        totalLicenses: 0,
+        averagePurchase: 0
+      }
+    };
+  }
+}
+
 // Middleware
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'], // Allow Vite dev server
@@ -427,6 +525,44 @@ app.get('/api/stats', async (req, res) => {
       }
     });
 
+    // Get external revenues data from Google Sheets
+    const externalRevenuesData = await getExternalRevenuesData();
+    console.log(`Processing ${externalRevenuesData.purchases.length} external purchases for weekly integration`);
+
+    // Process external revenues and add to weekly data
+    externalRevenuesData.purchases.forEach(purchase => {
+      if (purchase.date) {
+        const purchaseDate = new Date(purchase.date);
+        const weekStart = getMondayOfWeek(purchaseDate);
+        const weekKey = weekStart.toISOString().split('T')[0];
+
+        if (!weeklyData[weekKey]) {
+          weeklyData[weekKey] = {
+            week: weekKey,
+            sales: 0,
+            grossRevenue: 0,
+            refunds: 0,
+            fees: 0,
+            netRevenue: 0
+          };
+        }
+
+        // Add external revenue to the week (no fees for external sales)
+        weeklyData[weekKey].sales += purchase.quantite; // Add quantity of licenses sold
+        weeklyData[weekKey].grossRevenue += purchase.total;
+
+        console.log(`Added external purchase to week ${weekKey}: +${purchase.quantite} sales, +${purchase.total}€`);
+
+        // Track current week stats for external revenues
+        if (weekKey === currentWeekStart.toISOString().split('T')[0]) {
+          currentWeekSales += purchase.quantite;
+          currentWeekGrossRevenue += purchase.total;
+        }
+      }
+    });
+
+    console.log(`Total weeks after external integration: ${Object.keys(weeklyData).length}`);
+
     // Calculate net revenue for each week
     Object.values(weeklyData).forEach(week => {
       week.netRevenue = week.grossRevenue - week.refunds - week.fees;
@@ -435,7 +571,7 @@ app.get('/api/stats', async (req, res) => {
     const currentWeekNetRevenue = currentWeekGrossRevenue - currentWeekRefunds - currentWeekFees;
 
     // Convert to array and sort by date
-    const weeklyStats = Object.values(weeklyData).sort((a, b) => 
+    const weeklyStats = Object.values(weeklyData).sort((a, b) =>
       new Date(a.week).getTime() - new Date(b.week).getTime()
     );
 
@@ -447,29 +583,29 @@ app.get('/api/stats', async (req, res) => {
       data: {
         // Legacy field for compatibility
         totalRevenue: netRevenue,
-        
+
         // New comprehensive metrics
         grossRevenue,
         totalRefunds,
         totalFees: totalChargeFees - totalRefundFees,
         netRevenue,
-        
+
         totalCustomers,
         lastUpdate,
         weeklyStats,
         averageOrderValue: totalCustomers > 0 ? grossRevenue / totalCustomers : 0,
-        
+
         // Current week stats
         currentWeekSales,
         currentWeekGrossRevenue,
         currentWeekRefunds,
         currentWeekFees,
         currentWeekNetRevenue,
-        
+
         // Satisfaction data from Google Sheets
         averageRating: satisfactionData.averageRating,
         totalReviews: satisfactionData.totalReviews,
-        
+
         // Additional Google Sheets columns
         columnE: satisfactionData.columnE,
         columnF: satisfactionData.columnF,
@@ -477,12 +613,16 @@ app.get('/api/stats', async (req, res) => {
         columnW: satisfactionData.columnW,
         columnY: satisfactionData.columnY,
         columnAD: satisfactionData.columnAD,
-        
+
         // NPS metrics
         netPromoterScore: satisfactionData.netPromoterScore,
         npsPromotors: satisfactionData.npsPromotors,
         npsDetractors: satisfactionData.npsDetractors,
-        npsPassives: satisfactionData.npsPassives
+        npsPassives: satisfactionData.npsPassives,
+
+        // External revenues data
+        externalRevenues: externalRevenuesData.purchases,
+        externalRevenuesMetrics: externalRevenuesData.metrics
       }
     });
 

@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Typography,
 } from '@mui/material';
+import { Euro as EuroIcon } from '@mui/icons-material';
 import { theme } from './theme';
 import { useRef } from 'react';
 import { useStripeData } from './hooks/useStripeData';
@@ -20,6 +21,7 @@ import { SurveyStats } from './components/SurveyStats';
 import { Testimonials } from './components/Testimonials';
 import { DataTable } from './components/DataTable';
 import { ExportButton, type ExportButtonRef } from './components/ExportButton';
+import ExternalRevenuesTable from './components/ExternalRevenuesTable';
 
 function App() {
   const { stats, chartData, loading, error, refetch, lastUpdated } = useStripeData();
@@ -96,6 +98,26 @@ function App() {
 
           {/* Testimonials Section */}
           <Testimonials stats={stats} />
+
+          {/* External Revenues Section */}
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h5"
+              gutterBottom
+              sx={{
+                fontWeight: 'bold',
+                color: 'primary.main',
+                mb: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
+              <EuroIcon />
+              Achats Licences Hors Plateforme
+            </Typography>
+            <ExternalRevenuesTable purchases={stats?.externalRevenues || []} />
+          </Box>
 
           {/* Export Section */}
           <Box

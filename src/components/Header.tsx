@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import {
   EuroSymbol,
+  Euro,
   People,
   Refresh,
   PictureAsPdf,
@@ -28,9 +29,10 @@ interface KPICardProps {
   icon: React.ReactNode;
   color: string;
   hoverValue?: string; // Valeur à afficher au hover (ex: avec centimes)
+  subtitle?: string; // Texte additionnel sous la valeur
 }
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, hoverValue }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, hoverValue, subtitle }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -74,8 +76,8 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, hoverValue
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ 
-          fontWeight: 600, 
+        sx={{
+          fontWeight: 600,
           mb: 1,
           fontSize: '0.75rem',
           textTransform: 'uppercase',
@@ -87,15 +89,25 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, icon, color, hoverValue
       <Typography
         variant="h4"
         component="div"
-        sx={{ 
-          fontWeight: 700, 
+        sx={{
+          fontWeight: 700,
           color: 'text.primary',
           fontSize: '1.75rem',
           lineHeight: 1.2,
+          mb: subtitle ? 0.5 : 0,
         }}
       >
         {isHovered && hoverValue ? hoverValue : value}
       </Typography>
+      {subtitle && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontSize: '0.65rem' }}
+        >
+          {subtitle}
+        </Typography>
+      )}
     </Paper>
   );
 };
@@ -345,15 +357,15 @@ const NetRevenueKPICard: React.FC<{ stats: DashboardStats | null }> = ({ stats }
       <Typography
         variant="h4"
         component="div"
-        sx={{ 
-          fontWeight: 700, 
+        sx={{
+          fontWeight: 700,
           color: 'text.primary',
           fontSize: '1.75rem',
           lineHeight: 1.2,
         }}
       >
-        {stats ? 
-          (isHovered ? formatCurrencyWithDecimals(stats.netRevenue) : formatCurrency(stats.netRevenue)) 
+        {stats ?
+          (isHovered ? formatCurrencyWithDecimals(stats.netRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0)) : formatCurrency(stats.netRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0))) 
           : '---'}
       </Typography>
     </Paper>
@@ -631,9 +643,10 @@ const WeeklyStatsKPICard: React.FC<{ stats: DashboardStats | null }> = ({ stats 
 };
 
 const CompletionKPICard: React.FC<{ stats: DashboardStats | null }> = ({ stats }) => {
-  // Calculer le pourcentage de complétion (nombre d'avis / nombre de clients)
-  const completionRate = stats && stats.totalCustomers > 0 
-    ? (stats.totalReviews / stats.totalCustomers) * 100 
+  // Calculer le pourcentage de complétion (nombre d'avis / nombre de licences total incluant achats externes)
+  const totalLicences = stats ? (stats.totalCustomers + (stats.externalRevenuesMetrics?.totalLicenses || 0)) : 0;
+  const completionRate = stats && totalLicences > 0
+    ? (stats.totalReviews / totalLicences) * 100
     : 0;
 
   const getCompletionColor = (rate: number) => {
@@ -708,7 +721,7 @@ const CompletionKPICard: React.FC<{ stats: DashboardStats | null }> = ({ stats }
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-            {stats ? `${stats.totalReviews} avis sur ${stats.totalCustomers} clients` : '---'}
+            {stats ? `${stats.totalReviews} avis sur ${totalLicences} licences` : '---'}
           </Typography>
         </Box>
       </Box>
@@ -907,8 +920,9 @@ export const Header: React.FC<HeaderProps> = ({
           }}>
             <KPICard
               title="CA Brut"
-              value={stats ? formatCurrency(stats.grossRevenue) : '---'}
-              hoverValue={stats ? formatCurrencyWithDecimals(stats.grossRevenue) : undefined}
+              value={stats ? formatCurrency(stats.grossRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0)) : '---'}
+              hoverValue={stats ? formatCurrencyWithDecimals(stats.grossRevenue + (stats.externalRevenuesMetrics?.totalRevenue || 0)) : undefined}
+              subtitle={stats && stats.externalRevenuesMetrics?.totalRevenue > 0 ? `dont ${formatCurrency(stats.externalRevenuesMetrics.totalRevenue)} hors plateforme` : undefined}
               icon={<EuroSymbol />}
               color="#10b981"
             />
@@ -926,7 +940,7 @@ export const Header: React.FC<HeaderProps> = ({
             <WeeklyStatsKPICard stats={stats} />
           </Box>
           
-          {/* Troisième colonne - Nombre Total de Clients et Complétion Formation empilés */}
+          {/* Troisième colonne - Nombre Total d'Apprenants et Complétion Formation empilés */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: 'column', 
@@ -934,8 +948,9 @@ export const Header: React.FC<HeaderProps> = ({
             minWidth: 0
           }}>
             <KPICard
-              title="Nombre Total de Clients"
-              value={stats ? stats.totalCustomers.toString() : '---'}
+              title="Nombre de Licences"
+              value={stats ? (stats.totalCustomers + (stats.externalRevenuesMetrics?.totalLicenses || 0)).toString() : '---'}
+              subtitle={stats && stats.externalRevenuesMetrics?.totalLicenses > 0 ? `dont ${stats.externalRevenuesMetrics.totalLicenses} hors plateforme` : undefined}
               icon={<People />}
               color="#8b5cf6"
             />
@@ -943,9 +958,9 @@ export const Header: React.FC<HeaderProps> = ({
           </Box>
 
           {/* Dernière colonne - Satisfaction et NPS empilés (2x plus large) */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
             gap: 2,
             minWidth: 0
           }}>

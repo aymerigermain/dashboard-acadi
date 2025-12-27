@@ -57,6 +57,30 @@ export interface DashboardStats {
   npsPromotors: number; // Number of promotors (9-10)
   npsDetractors: number; // Number of detractors (0-6)
   npsPassives: number; // Number of passives (7-8)
+
+  // External revenues data
+  externalRevenues: ExternalRevenue[];
+  externalRevenuesMetrics: ExternalRevenuesMetrics;
+}
+
+export interface ExternalRevenue {
+  produit: string;
+  prixUnitaire: number;
+  quantite: number;
+  total: number;
+  acheteur: string;
+  contactFormateur: string;
+  contactFinanceur: string;
+  cadre: string;
+  date: string | null;  // ISO format ou null
+  remarques: string;
+}
+
+export interface ExternalRevenuesMetrics {
+  totalRevenue: number;
+  totalPurchases: number;
+  totalLicenses: number;
+  averagePurchase: number;
 }
 
 export interface ApiResponse<T> {
